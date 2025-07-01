@@ -242,6 +242,9 @@ class Score:
         screen.blit(self.image, self.rect)
 
 class Gravity(pg.sprite.Sprite):
+    """
+    重力場に関するクラス
+    """
     def __init__(self, life: int = 400):
         super().__init__()
         self.image = pg.Surface((WIDTH, HEIGHT))

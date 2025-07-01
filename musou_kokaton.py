@@ -391,12 +391,12 @@ def main():
             score.value += 10  # 10点アップ
             bird.change_img(6, screen)  # こうかとん喜びエフェクト
 
-        # for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
-        #     exps.add(Explosion(bomb, 50))  # 爆発エフェクト
-        #     score.value += 1  # 1点アップ
-
-        for bomb in pg.sprite.groupcollide(bombs, shields, True, False).keys():  # ビームと衝突した爆弾リスト
+        for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
             exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+            score.value += 1  # 1点アップ
+
+        # for bomb in pg.sprite.groupcollide(bombs, shields, True, False).keys():  # ビームと衝突した爆弾リスト
+        #     exps.add(Explosion(bomb, 50))  # 爆発エフェクト
 
         for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
             if bird.state == "hyper":

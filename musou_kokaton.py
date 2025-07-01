@@ -248,6 +248,25 @@ class Score:
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
 
+class Gravity(pg.sprite.Sprite):
+    """
+    重力場に関するクラス
+    """
+    def __init__(self, life: int = 400):
+        super().__init__()
+        self.image = pg.Surface((WIDTH, HEIGHT))
+        self.image.fill((0, 0, 0))
+        self.image.set_alpha(128)  # 半透明
+        self.rect = self.image.get_rect()
+        self.life = life
+
+    def update(self):
+        self.life -= 1
+        if self.life < 0:
+            self.kill()
+
+
+
 
 class Shield(pg.sprite.Sprite):
     """
@@ -289,6 +308,9 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    gravities = pg.sprite.Group()
+
+
 
     tmr = 0
     clock = pg.time.Clock()
@@ -307,6 +329,10 @@ def main():
                     if score.value > 50 and len(shields) == 0:
                         score.value -= 50
                         shields.add(Shield(bird, 400))
+                elif event.key == pg.K_RETURN:
+                    if score.value >= 200:
+                        gravities.add(Gravity())
+                        score.value -= 200
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -353,6 +379,20 @@ def main():
         emys.draw(screen)
         bombs.update()
         bombs.draw(screen)
+
+        # 重力場を更新＆描画
+        gravities.update()
+        gravities.draw(screen)
+
+        # 重力場の効果（爆弾・敵の除去）
+        for gravity in gravities:
+            for bomb in pg.sprite.spritecollide(gravity, bombs, True):
+                exps.add(Explosion(bomb, 50))
+                score.value += 1
+            for emy in pg.sprite.spritecollide(gravity, emys, True):
+                exps.add(Explosion(emy, 100))
+                score.value += 10
+
         exps.update()
         exps.draw(screen)
         score.update(screen)

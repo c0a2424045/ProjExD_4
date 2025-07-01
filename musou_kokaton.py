@@ -141,21 +141,31 @@ class Beam(pg.sprite.Sprite):
     """
     ビームに関するクラス
     """
-    def __init__(self, bird: Bird):
+    def __init__(self, bird: Bird, angle: float = 0):
         """
         ビーム画像Surfaceを生成する
         引数 bird：ビームを放つこうかとん
         """
+
         super().__init__()
-        self.vx, self.vy = bird.dire
-        angle = math.degrees(math.atan2(-self.vy, self.vx))
-        self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle, 1.0)
-        self.vx = math.cos(math.radians(angle))
-        self.vy = -math.sin(math.radians(angle))
+        rad_angle = math.radians(angle)
+        self.vx = bird.dire[0]*math.cos(rad_angle) - bird.dire[1]*math.sin(rad_angle)
+        self.vy = bird.dire[0]*math.sin(rad_angle) + bird.dire[1]*math.cos(rad_angle)
+        angle_deg = math.degrees(math.atan2(-self.vy, self.vx))
+        self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle_deg, 1.0)
         self.rect = self.image.get_rect()
-        self.rect.centery = bird.rect.centery+bird.rect.height*self.vy
-        self.rect.centerx = bird.rect.centerx+bird.rect.width*self.vx
+        self.rect.center = bird.rect.center
         self.speed = 10
+        # super().__init__()
+        # self.vx, self.vy = bird.dire
+        # angle = math.degrees(math.atan2(-self.vy, self.vx))
+        # self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle, 1.0)
+        # self.vx = math.cos(math.radians(angle))
+        # self.vy = -math.sin(math.radians(angle))
+        # self.rect = self.image.get_rect()
+        # self.rect.centery = bird.rect.centery+bird.rect.height*self.vy
+        # self.rect.centerx = bird.rect.centerx+bird.rect.width*self.vx
+        # self.speed = 10
 
     def update(self):
         """
@@ -241,6 +251,27 @@ class Score:
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
 
+class NeoBeam:
+    def __init__(self, bird: Bird, num: int = 5):
+        """
+        bird: こうかとん（ビームを撃つやつ）
+        num: 発射するビームの数（奇数推奨）
+        """
+        self.bird = bird
+        self.num = num
+
+    def gen_beams(self) -> list[Beam]:
+        """
+        ビーム角度をずらしながら Beam インスタンスをリストで返す
+        """
+        if self.num < 1:
+            return []
+
+        step = 100 // (self.num - 1) if self.num > 1 else 0
+        angles = list(range(-50, 51, step))  # -50〜+50 度まで等間隔
+
+        return [Beam(self.bird, angle) for angle in angles]
+
 
 def main():
     pg.display.set_caption("真！こうかとん無双")
@@ -261,8 +292,13 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return 0
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_SPACE and not key_lst[pg.K_LSHIFT]:
+                    beams.add(Beam(bird))  # 通常ビーム
+                elif event.key == pg.K_SPACE and key_lst[pg.K_LSHIFT]:
+                    neobeam = NeoBeam(bird, num=5)  # 弾幕インスタンス作成
+                    for b in neobeam.gen_beams():   # ビーム生成＆追加
+                        beams.add(b)
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる

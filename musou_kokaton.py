@@ -4,6 +4,7 @@ import random
 import sys
 import time
 import pygame as pg
+import math
 
 
 WIDTH = 1100  # ゲームウィンドウの幅
@@ -138,6 +139,7 @@ class Bomb(pg.sprite.Sprite):
         self.rect.centerx = emy.rect.centerx
         self.rect.centery = emy.rect.centery+emy.rect.height//2
         self.speed = 6
+        self.state = "active"
 
     def update(self):
         """
@@ -145,7 +147,7 @@ class Bomb(pg.sprite.Sprite):
         引数 screen：画面Surface
         """
         self.rect.move_ip(self.speed*self.vx, self.speed*self.vy)
-        if check_bound(self.rect) != (True, True):
+        if check_bound(self.rect) != (True, True): #爆弾が画面外に出たら爆弾をグループから消す
             self.kill()
 
 
@@ -168,7 +170,7 @@ class Beam(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = bird.rect.center
         self.speed = 10
-        # super().__init__()
+        #super().__init__()
         # self.vx, self.vy = bird.dire
         # angle = math.degrees(math.atan2(-self.vy, self.vx))
         # self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle, 1.0)
@@ -232,6 +234,7 @@ class Enemy(pg.sprite.Sprite):
         self.bound = random.randint(50, HEIGHT//2)  # 停止位置
         self.state = "down"  # 降下状態or停止状態
         self.interval = random.randint(50, 300)  # 爆弾投下インターバル
+        
 
     def update(self):
         """
@@ -333,6 +336,33 @@ class NeoBeam:
         return [Beam(self.bird, angle) for angle in angles]
 
 
+class EMP:
+    """
+    発動時に存在する敵機と爆弾を無効化するクラス
+    """
+    def __init__(self,Enemys:pg.sprite.Group, Bombs:pg.sprite.Group, screen: pg.Surface): 
+            
+
+            for enemy in Enemys:
+                enemy.image = pg.Surface((WIDTH,HEIGHT))
+                
+                enemy.interval = math.inf
+                enemy.image = pg.transform.laplacian(enemy.image)
+            for bomb in Bombs:
+                bomb.speed = bomb.speed/2
+                bomb.state = "inactive"
+            
+            yellow = pg.Surface((WIDTH,HEIGHT))    
+            yellow_rct = yellow.get_rect()
+            pg.draw.rect(yellow,(255,255,0),(0,0,WIDTH,HEIGHT))
+            yellow.set_alpha(100)
+            screen.blit(yellow,yellow_rct)
+            pg.display.update()
+            time.sleep(0.05)
+        
+        
+
+
 def main():
     pg.display.set_caption("真！こうかとん無双")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -347,7 +377,11 @@ def main():
     gravities = pg.sprite.Group()
 
 
+    # emps = pg.sprite.Group()
 
+    
+    
+    
     tmr = 0
     clock = pg.time.Clock()
 
@@ -375,6 +409,12 @@ def main():
                     neobeam = NeoBeam(bird, num=5)  # 弾幕インスタンス作成
                     for b in neobeam.gen_beams():   # ビーム生成＆追加
                         beams.add(b)
+                if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                    beams.add(Beam(bird))
+                if event.type == pg.KEYDOWN and event.key == pg.K_e:
+                    if score.value>20:
+                        EMP(emys,bombs,screen)
+                        score.value -= 20
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -391,12 +431,12 @@ def main():
             score.value += 10  # 10点アップ
             bird.change_img(6, screen)  # こうかとん喜びエフェクト
 
-        for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
+        for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト 後ろをFalseにするとビームが貫通
             exps.add(Explosion(bomb, 50))  # 爆発エフェクト
             score.value += 1  # 1点アップ
 
-        # for bomb in pg.sprite.groupcollide(bombs, shields, True, False).keys():  # ビームと衝突した爆弾リスト
-        #     exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+        for bomb in pg.sprite.groupcollide(bombs, shields, True, False).keys():  # ビームと衝突した爆弾リスト
+            exps.add(Explosion(bomb, 50))  # 爆発エフェクト
 
         for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
             if bird.state == "hyper":
@@ -413,6 +453,11 @@ def main():
             bird.state = "hyper"
             bird.hyper_life = 500
             score.value -= 100
+            
+        
+        # if key_lst[pg.K_e] and score.value>20:
+        #     # emps.add(EMP(emys,bombs,screen))
+        #     score.value -= 20
 
         bird.update(key_lst, screen)
         beams.update()
